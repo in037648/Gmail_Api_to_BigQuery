@@ -47,9 +47,14 @@ def table_exists(client, dataset_id, table_id):
     except Exception:
         return False
 
-def clean_dataframe(df):
+def clean_dataframe(df, original_columns):
     # Drop duplicate rows
     df = df.drop_duplicates()
+    
+    # Remove rows that contain column names
+    column_name_row_mask = df.apply(lambda row: row.astype(str).str.contains('|'.join(original_columns)).all(), axis=1)
+    df = df[~column_name_row_mask]
+    
     return df
 
 def upload_to_bigquery(dataset_id, table_id, dataframe):
@@ -74,12 +79,12 @@ def upload_to_bigquery(dataset_id, table_id, dataframe):
         if field_type == 'STRING':
             dataframe[column] = dataframe[column].astype(str)
         elif field_type == 'INTEGER':
-            dataframe[column] = pd.to_numeric(dataframe[column], errors='coerce').fillna(0).astype(int)
+            dataframe[column] = pd.to_numeric(dataframe[column].str.replace(',', '').str.replace('$', ''), errors='coerce').fillna(0).astype(int)
         elif field_type == 'FLOAT':
-            dataframe[column] = pd.to_numeric(dataframe[column], errors='coerce').astype(float)
+            dataframe[column] = pd.to_numeric(dataframe[column].str.replace(',', '').str.replace('$', ''), errors='coerce').astype(float)
         elif field_type == 'BOOLEAN':
             dataframe[column] = dataframe[column].astype(bool)
-        # Add more type conversions as necessary
+        # No changes to date or datetime columns
 
     job_config = bigquery.LoadJobConfig(
         write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
@@ -95,11 +100,11 @@ def upload_to_bigquery(dataset_id, table_id, dataframe):
 
 def main(request):
     creds = Credentials.from_authorized_user_info({
-        "token": "token",
-        "refresh_token": "refresh_toekn",
+        "token": "access_token",
+        "refresh_token": "refresh_token",
         "token_uri": "https://oauth2.googleapis.com/token",
         "client_id": "client_id",
-        "client_secret": "secret",
+        "client_secret": "client_secret",
         "scopes": ["https://www.googleapis.com/auth/gmail.readonly"],
         "universe_domain": "googleapis.com",
         "account": "",
@@ -163,10 +168,11 @@ def main(request):
         for subject, content in file_contents_by_subject.items():
             sanitized_subject = sanitize_subject(subject)
             df = pd.read_csv(io.StringIO(content))
+            original_columns = df.columns.tolist()
             df = format_column_names(df)
             
             # Clean and deduplicate the DataFrame
-            df = clean_dataframe(df)
+            df = clean_dataframe(df, original_columns)
 
             table_id = sanitized_subject
             upload_to_bigquery(dataset_id, table_id, df)
@@ -191,4 +197,3 @@ if __name__ == "__main__":
         return main(request)
 
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
-            
