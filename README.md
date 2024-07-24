@@ -33,3 +33,25 @@ This project requires the following Python packages. These can be installed usin
    ```sh
    git clone https://github.com/yourusername/your-repo-name.git
    cd your-repo-name
+
+2. **Create a virtual environment:**
+   python -m venv venv
+   source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+
+3. **Install the dependencies:**
+   pip install -r requirements.txt
+
+4. **Set up Google Cloud Credentials:**
+   >Ensure you have a Google Cloud project with the BigQuery and Gmail APIs enabled.
+   >Create and download OAuth 2.0 credentials (JSON file) and place it in the project directory as credentials.json.
+   >Set up the necessary environment variables or update the code with your credentials.
+
+## Usage
+   The main.py file contains the main function which serves as the entry point for the Cloud Function. This function handles:
+   
+   .Authenticating with Gmail API
+   .Fetching emails with specific criteria
+   .Parsing CSV links from emails
+   .Processing CSV files
+   .Uploading data to BigQuery
+   To deploy the Cloud Function, follow the Google Cloud Functions deployment guide using the 'main.py' file.
